@@ -8,7 +8,7 @@ spring:
   datasource:
     url: ${DB_URL:jdbc:mysql://localhost:3306/rating_db}
     username: ${DB_USERNAME:rating_user}
-    password: ${DB_PASSWORD}
+    password: ${DB_PASSWORD:rating_pass}
 
   jpa:
     hibernate:
