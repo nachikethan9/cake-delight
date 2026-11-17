@@ -1,17 +1,21 @@
 package com.cakedelight.catalog_service.service;
 
+import com.cakedelight.catalog_service.dto.CakeFilter;                          // NEW
 import com.cakedelight.catalog_service.dto.CakeRequest;
 import com.cakedelight.catalog_service.dto.CakeResponse;
+import com.cakedelight.catalog_service.dto.PagedResponse;                       // NEW
 import com.cakedelight.catalog_service.entity.Cake;
 import com.cakedelight.catalog_service.exception.CakeNotFoundException;
+import com.cakedelight.catalog_service.exception.InvalidPriceRangeException;    // NEW
 import com.cakedelight.catalog_service.mapper.CakeMapper;
 import com.cakedelight.catalog_service.repository.CakeRepository;
+import com.cakedelight.catalog_service.repository.CakeSpecifications;           // NEW
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Page;                                    // NEW
+import org.springframework.data.domain.Pageable;                                // NEW
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-
-import java.util.List;
 
 @Service
 @RequiredArgsConstructor
@@ -33,11 +37,13 @@ public class CakeService {
         return cakeMapper.toResponse(findCakeOrThrow(id));
     }
 
-    public List<CakeResponse> getAllCakes() {
-        return cakeRepository.findAll()
-                .stream()
-                .map(cakeMapper::toResponse)
-                .toList();
+    // NEW: replaces getAllCakes()
+    public PagedResponse<CakeResponse> searchCakes(CakeFilter filter, Pageable pageable) {
+        validatePriceRange(filter);
+        Page<CakeResponse> page = cakeRepository
+                .findAll(CakeSpecifications.withFilter(filter), pageable)
+                .map(cakeMapper::toResponse);
+        return PagedResponse.from(page);
     }
 
     @Transactional
@@ -60,5 +66,13 @@ public class CakeService {
     private Cake findCakeOrThrow(Long id) {
         return cakeRepository.findById(id)
                 .orElseThrow(() -> new CakeNotFoundException(id));
+    }
+
+    // NEW
+    private void validatePriceRange(CakeFilter filter) {
+        if (filter.minPrice() != null && filter.maxPrice() != null
+                && filter.minPrice().compareTo(filter.maxPrice()) > 0) {
+            throw new InvalidPriceRangeException(filter.minPrice(), filter.maxPrice());
+        }
     }
 }
