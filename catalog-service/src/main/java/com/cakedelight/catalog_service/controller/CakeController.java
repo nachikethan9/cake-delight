@@ -1,19 +1,20 @@
 package com.cakedelight.catalog_service.controller;
 
-import com.cakedelight.catalog_service.dto.CakeFilter;               // NEW
+import com.cakedelight.catalog_service.dto.CakeFilter;
 import com.cakedelight.catalog_service.dto.CakeRequest;
 import com.cakedelight.catalog_service.dto.CakeResponse;
-import com.cakedelight.catalog_service.dto.PagedResponse;            // NEW
-import com.cakedelight.catalog_service.entity.CakeCategory;          // NEW
+import com.cakedelight.catalog_service.dto.PagedResponse;
+import com.cakedelight.catalog_service.entity.CakeCategory;
 import com.cakedelight.catalog_service.service.CakeService;
+import jakarta.validation.Valid;                                     // NEW
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;                     // NEW
-import org.springframework.data.web.PageableDefault;                 // NEW
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
-import java.math.BigDecimal;                                         // NEW
+import java.math.BigDecimal;
 import java.net.URI;
 
 @RestController
@@ -24,7 +25,7 @@ public class CakeController {
     private final CakeService cakeService;
 
     @PostMapping
-    public ResponseEntity<CakeResponse> createCake(@RequestBody CakeRequest request) {
+    public ResponseEntity<CakeResponse> createCake(@Valid @RequestBody CakeRequest request) {   // NEW: @Valid
         CakeResponse created = cakeService.createCake(request);
         URI location = ServletUriComponentsBuilder.fromCurrentRequest()
                 .path("/{id}")
@@ -38,7 +39,6 @@ public class CakeController {
         return ResponseEntity.ok(cakeService.getCakeById(id));
     }
 
-    // NEW: replaces getAllCakes()
     @GetMapping
     public ResponseEntity<PagedResponse<CakeResponse>> searchCakes(
             @RequestParam(required = false) String name,
@@ -54,7 +54,7 @@ public class CakeController {
 
     @PutMapping("/{id}")
     public ResponseEntity<CakeResponse> updateCake(@PathVariable Long id,
-                                                   @RequestBody CakeRequest request) {
+                                                   @Valid @RequestBody CakeRequest request) {   // NEW: @Valid
         return ResponseEntity.ok(cakeService.updateCake(id, request));
     }
 
