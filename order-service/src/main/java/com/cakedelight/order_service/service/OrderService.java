@@ -4,6 +4,7 @@ import com.cakedelight.order_service.client.CatalogCakeResponse;
 import com.cakedelight.order_service.client.CatalogClient;
 import com.cakedelight.order_service.dto.*;
 import com.cakedelight.order_service.entity.*;
+import com.cakedelight.order_service.event.OrderCompletedEvent;                  // NEW (O4)
 import com.cakedelight.order_service.exception.CakeUnavailableException;
 import com.cakedelight.order_service.exception.EmptyBasketException;
 import com.cakedelight.order_service.exception.InvalidStatusTransitionException;
@@ -13,6 +14,7 @@ import com.cakedelight.order_service.repository.BasketRepository;
 import com.cakedelight.order_service.repository.OrderRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;                    // NEW (O4)
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +29,7 @@ public class OrderService {
     private final BasketRepository basketRepository;
     private final CatalogClient catalogClient;
     private final OrderMapper orderMapper;
+    private final ApplicationEventPublisher eventPublisher;                       // NEW (O4)
 
     @Transactional
     public OrderResponse checkout(CheckoutRequest request) {
@@ -59,7 +62,8 @@ public class OrderService {
         log.info("Order placed orderId={} userId={} items={} total={}",
                 saved.getId(), userId, saved.getItems().size(), saved.getTotalAmount());
 
-        // O4: publish "order completed" event here
+        // 4. Raise the event - it is sent to Kafka only AFTER the transaction commits   // NEW (O4)
+        eventPublisher.publishEvent(OrderCompletedEvent.from(saved));                      // NEW (O4)
 
         return orderMapper.toResponse(saved);
     }
