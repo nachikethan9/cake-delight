@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Cake Delight</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<header class="topbar">
+    <h1>🎂 Cake Delight</h1>
+    <div class="user">
+        <label>User ID <input id="userId" value="alice" autocomplete="off"></label>
+        <label>Email <input id="email" type="email" value="alice@example.com" autocomplete="off"></label>
+        <button id="switchUser">Load user</button>
+    </div>
+</header>
+
+<div id="toast" class="toast hidden"></div>
+
+<main class="layout">
+
+    <!-- ===== Catalog: browse + filter + add to basket + rate ===== -->
+    <section class="catalog">
+        <h2>Cakes</h2>
+
+        <form id="filters" class="filters">
+            <input id="fName" placeholder="Name contains…">
+            <select id="fCategory"></select>
+            <input id="fMin" type="number" min="0" step="0.01" placeholder="Min ₹">
+            <input id="fMax" type="number" min="0" step="0.01" placeholder="Max ₹">
+            <select id="fSort">
+                <option value="name,asc">Name A–Z</option>
+                <option value="price,asc">Price low → high</option>
+                <option value="price,desc">Price high → low</option>
+            </select>
+            <label class="check"><input id="fAvailable" type="checkbox"> Available only</label>
+            <button type="submit">Search</button>
+            <button type="button" id="resetFilters" class="secondary">Reset</button>
+        </form>
+
+        <div id="cakes" class="grid"></div>
+
+        <div class="pager">
+            <button id="prevPage" class="secondary">‹ Prev</button>
+            <span id="pageInfo" class="muted"></span>
+            <button id="nextPage" class="secondary">Next ›</button>
+        </div>
+    </section>
+
+    <!-- ===== Side panels: basket, orders, notifications ===== -->
+    <aside class="side">
+        <section class="panel">
+            <h2>Basket</h2>
+            <div id="basket"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <h2>My orders</h2>
+                <button id="refreshOrders" class="link">Refresh</button>
+            </div>
+            <div id="orders"></div>
+        </section>
+
+        <section class="panel">
+            <div class="panel-head">
+                <h2>Notifications</h2>
+                <button id="refreshNotifications" class="link">Refresh</button>
+            </div>
+            <div id="notifications"></div>
+        </section>
+    </aside>
+</main>
+
+<script src="app.js"></script>
+</body>
+</html>
