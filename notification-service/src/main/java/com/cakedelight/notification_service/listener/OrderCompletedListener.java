@@ -1,6 +1,7 @@
 package com.cakedelight.notification_service.listener;
 
 import com.cakedelight.notification_service.event.OrderCompletedEvent;
+import com.cakedelight.notification_service.exception.MalformedEventException;
 import com.cakedelight.notification_service.service.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,14 +24,7 @@ public class OrderCompletedListener {
         log.info("Received message key={} partition={} offset={}",
                 record.key(), record.partition(), record.offset());
 
-        OrderCompletedEvent event;
-        try {
-            event = jsonMapper.readValue(record.value(), OrderCompletedEvent.class);
-        } catch (JacksonException ex) {
-            log.error("Skipping malformed message partition={} offset={}: {}",
-                    record.partition(), record.offset(), ex.getOriginalMessage());
-            return;
-        }
+        OrderCompletedEvent event = parse(record);
 
         if (!OrderCompletedEvent.TYPE.equals(event.eventType())) {
             log.warn("Ignoring unexpected eventType={} at offset={}", event.eventType(), record.offset());
@@ -38,5 +32,14 @@ public class OrderCompletedListener {
         }
 
         notificationService.handleOrderCompleted(event);
+    }
+
+    private OrderCompletedEvent parse(ConsumerRecord<String, String> record) {
+        try {
+            return jsonMapper.readValue(record.value(), OrderCompletedEvent.class);
+        } catch (JacksonException ex) {
+            throw new MalformedEventException(
+                    "Malformed event at partition=" + record.partition() + " offset=" + record.offset(), ex);
+        }
     }
 }

@@ -28,6 +28,17 @@ spring:
       auto-offset-reset: earliest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer
+
+  mail:
+    host: ${MAIL_HOST:localhost}
+    port: ${MAIL_PORT:1025}
+    properties:
+      mail.smtp.connectiontimeout: 3000
+      mail.smtp.timeout: 3000
+      mail.smtp.writetimeout: 3000
 
 management:
   endpoints:
@@ -45,3 +56,7 @@ app:
   kafka:
     topics:
       order-completed: order-completed
+      order-completed-dlt: order-completed.DLT
+  notification:
+    sender: ${NOTIFICATION_SENDER:smtp}
+    from: no-reply@cakedelight.local

@@ -6,6 +6,7 @@ import com.cakedelight.notification_service.entity.Notification;
 import com.cakedelight.notification_service.entity.NotificationChannel;
 import com.cakedelight.notification_service.entity.NotificationStatus;
 import com.cakedelight.notification_service.event.OrderCompletedEvent;
+import com.cakedelight.notification_service.exception.NotificationDeliveryException;
 import com.cakedelight.notification_service.mapper.NotificationMapper;
 import com.cakedelight.notification_service.repository.NotificationRepository;
 import com.cakedelight.notification_service.sender.NotificationSender;
@@ -29,33 +30,38 @@ public class NotificationService {
 
     @Transactional
     public void handleOrderCompleted(OrderCompletedEvent event) {
-        // 1. Idempotency: Kafka is at-least-once, so the same event can arrive twice
+        // 1. Idempotency: the same event may arrive more than once
         if (notificationRepository.existsByEventId(event.eventId())) {
             log.info("Duplicate event ignored eventId={} orderId={}", event.eventId(), event.orderId());
             return;
         }
 
-        // 2. Record the notification as PENDING
-        Notification notification = new Notification();
-        notification.setEventId(event.eventId());
-        notification.setOrderId(event.orderId());
-        notification.setUserId(event.userId());
-        notification.setRecipient(event.customerEmail());
-        notification.setChannel(NotificationChannel.EMAIL);
-        notification.setStatus(NotificationStatus.PENDING);
-        notification.setSubject("Cake Delight - Order #" + event.orderId() + " confirmed");
-        notification.setMessage(buildMessage(event));
+        // 2. Build and save
+        Notification notification = newNotification(event);
         notificationRepository.save(notification);
 
-        // 3. Send it and record the outcome
+        // 3. Send. On failure THROW -> transaction rolls back -> Kafka error handler retries
         try {
             notificationSender.send(notification);
-            notification.markSent();
-            log.info("Notification SENT orderId={} to={}", event.orderId(), event.customerEmail());
         } catch (Exception ex) {
-            notification.markFailed(ex.getMessage());
-            log.error("Notification FAILED orderId={} to={}", event.orderId(), event.customerEmail(), ex);
+            throw new NotificationDeliveryException(
+                    "Could not deliver notification for order " + event.orderId(), ex);
         }
+
+        notification.markSent();
+        log.info("Notification SENT orderId={} to={}", event.orderId(), event.customerEmail());
+    }
+
+    /** Called only after all retries are exhausted. */
+    @Transactional
+    public void recordFailure(OrderCompletedEvent event, String reason) {
+        if (notificationRepository.existsByEventId(event.eventId())) {
+            return;
+        }
+        Notification notification = newNotification(event);
+        notification.markFailed(reason);
+        notificationRepository.save(notification);
+        log.warn("Notification recorded as FAILED orderId={} reason={}", event.orderId(), reason);
     }
 
     public PagedResponse<NotificationResponse> getNotificationsForUser(String userId, Pageable pageable) {
@@ -67,6 +73,19 @@ public class NotificationService {
         return notificationRepository.findByOrderIdOrderByCreatedAtDesc(orderId).stream()
                 .map(notificationMapper::toResponse)
                 .toList();
+    }
+
+    private Notification newNotification(OrderCompletedEvent event) {
+        Notification notification = new Notification();
+        notification.setEventId(event.eventId());
+        notification.setOrderId(event.orderId());
+        notification.setUserId(event.userId());
+        notification.setRecipient(event.customerEmail());
+        notification.setChannel(NotificationChannel.EMAIL);
+        notification.setStatus(NotificationStatus.PENDING);
+        notification.setSubject("Cake Delight - Order #" + event.orderId() + " confirmed");
+        notification.setMessage(buildMessage(event));
+        return notification;
     }
 
     private String buildMessage(OrderCompletedEvent event) {
